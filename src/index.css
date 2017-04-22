@@ -1,0 +1,94 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+
+div {
+	border: 1px solid black;
+}
+
+div.opponent-row {
+  display: flex;
+}
+
+
+div.hand {
+	display: flex;
+	flex: 7;
+	justify-content: center;
+}
+
+.health {
+  flex: 1;
+}
+
+.monsterCard {
+	padding: 1%;
+	width: 150px;
+	height: 200px;
+	line-height: .4em;
+	background-color: #efefef;
+	margin: 0.5%;
+}
+
+/* Hides all the play buttons on all visible mosnters */
+div.playerHand button.play, div.middle-row button.play {
+	position: absolute;
+	display: none;
+}
+
+.play-hover {
+	background-color: green;
+}
+
+.monsterCardBack {
+	padding: 1%;
+	width: 150px;
+	height: 200px;
+	margin: 0.5%;
+	border: 3px solid black;
+	background-color: blue;
+
+}
+
+div.monsterCardEmpty {
+	padding: 1%;
+	width: 150px;
+	height: 200px;
+	line-height: .4em;
+	background-color: #efefef;
+	margin: 0.5%;
+	text-align: center;
+	vertical-align: center;
+}
+
+
+div.top-row-monster {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: flex-start;
+}
+
+h3.monsterHealth {
+	font-size: 2.5em;
+	color: red;
+	margin-top: -.1em;
+}
+
+div.middle-row {
+	display: flex;
+	justify-content: space-between;
+	margin: 2%;
+}
+
+div.enemyMonsters .monsterCardEmpty {
+	margin-left: auto;
+	margin-right: 0;
+}
+
+div.enemyMonsters .monsterCard {
+	margin-left: auto;
+	margin-right: 0;
+}
