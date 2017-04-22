@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
-import logo from './logo.svg'
-import Popout from './Popout.js'
+import ReactDOM from 'react-dom'
 import './App.css'
 
 let monsters = [
@@ -62,9 +61,12 @@ let spells = [
     type: 'spell',
     tier: 1,
     effectText: 'deal 200 damage',
-    healthCost: 100
+    healthCost: 100,
+    damage: 200
   }
 ]
+
+// ///////////////////////////////////////////////////// RENDERINGS ///////////////////////////////
 
 // renders a blank card back
 const CardBack = () => {
@@ -73,19 +75,32 @@ const CardBack = () => {
   )
 }
 
+// If player.MIP has at least one item, then this displays a Card with the last card in the arry
 const MIPArea = ({player}) => {
   if (player.MIP.length) {
-    return <Card card={player.MIP[0]} />
+    return <InPlayCard card={player.MIP[player.MIP.length - 1]} />
   } else {
     return <CardBack />
   }
 }
 
+const InPlayCard = ({card}) => (
+  <div className='monsterCard'>
+    <div className='top-row-monster'>
+      <h3 className='monsterName'>{card.name}</h3>
+      <h3 className='monsterHealth'>{card.HP}</h3>
+    </div>
+    <p className='monsterMaster'>Master: {card.master.join(' ')}</p>
+    <p className='monsterApprentice'>Apprentice: {card.apprentice.join(' ')}</p>
+    <p className='monsterWeak'>Weak to: {card.weak.join(' ')}</p>
+  </div>
+)
+
 // takes a player as an input and returns a div with all the cards in their hand displayed
-const Hand = ({player}) => (
+const Hand = ({player, onPlay}) => (
   <div className='hand'>
     {player.hand.map((card, index) =>
-      <Card card={card} key={index} player={player} />
+      <Card card={card} key={index} player={player} onPlay={onPlay} myIndex={index} />
     )}
   </div>
 )
@@ -98,109 +113,92 @@ const BlindHand = ({player}) => (
   </div>
 )
 
-class HostingComponent extends React.Component {
-  constructor (props) {
-    super(props)
-    this.popout = this.popout.bind(this)
-    this.popoutClosed = this.popoutClosed.bind(this)
-    this.state = { isPoppedOut: false }
-  }
-
-  popout () {
-    this.setState({isPoppedOut: true})
-  }
-
-  popoutClosed () {
-    this.setState({isPoppedOut: false})
-  }
-
-  render () {
-    if (this.state.isPoppedOut) {
-      return (
-        <Popout url='popout.html' title='Window title' onClosing={this.popoutClosed}>
-          <div>Popped out content!</div>
-        </Popout>
-      )
-    } else {
-      var popout = <span onClick={this.popout} className='buttonGlyphicon glyphicon glyphicon-export'>OPEN</span>
-      return (
-        <div>
-          <strong>Section {popout}</strong>
-          <div>Inline content</div>
-        </div>
-      )
-    }
-  }
-}
-
 const Health = ({player}) => (
   <div className='health'>
     <h3>{player.name} Health: {player.HP}</h3>
   </div>
  )
 
-const canPlay = (card, player) => {
-  if (card.type === 'monster') {
-    if (card.tier === returnEvolveTier(player.MIP)) {
-      return true
-    } else {
-      return false
-    }
-  } else if (card.type === 'spell') {
-    if (card.tier === returnTier(player.MIP)) {
-      return true
-    } else {
-      return false
-    }
+// ////////////////////////////////////////////////////////////////////////////////////
+
+// takes a card and a player and gives them a play button if they can be played
+
+const shuffle = (myArray) => {
+  if (myArray.length === 0) {
   }
+  const newArray = [...myArray]
+  let i = 0
+  let j = 0
+  let temp = null
+
+  for (i = newArray.length - 1; i > 0; i -= 1) {
+    j = Math.floor(Math.random() * (i + 1))
+    temp = newArray[i]
+    newArray[i] = newArray[j]
+    newArray[j] = temp
+  }
+  return newArray
 }
 
-// This function takes a card and returns that card's tier
+// takes a player as an input
+// creates a cloned object that takes the player's deck and trash, concats them, and calls shuffle()
+// Returns a new deck with all the cards from the trash properly shuffled in
+const shuffleTrashIntoDeck = (deck, trash) => {
+  let newDeck = [...deck].concat([...trash])
+  newDeck = shuffle(newDeck)
+  return newDeck
+}
 
-const returnTier = function (card) {
-  if (card.tier) {
-    return card.tier
+// Takes a player as an input, then returns true if they have a monster in play, and false if not
+const hasMIP = function (player) {
+  if (player.MIP.tier) {
+    return true
   } else {
     return false
   }
 }
 
-// This function takes a card and returns that card's evolution tier
-
-const returnEvolveTier = function (card) {
-  const evolveTier = returnTier(card) + 1
-  return evolveTier
+// takes a spell card and a player object and calculates the damage the spell can do, returning the damage as a number
+// returns false if the player cannot cast the spell normally
+const calcSpellDamage = (spellCard, player) => {
+  let damage = 0
+  if (!hasMIP(player)) {
+    return false
+  } else if (player.MIP.master.indexOf(spellCard.tier) !== -1) {
+    damage = spellCard.damage
+    return damage
+  } else if (player.MIP.apprentice.indexOf(spellCard.tier) !== -1) {
+    damage = spellCard.damage - 200
+    return damage
+  } else {
+    return false
+  }
 }
 
-const Card = ({card, player}) => {
-  var buttonProps = {
-    display: canPlay(card, player) ? 'block' : 'none'
+const canPlay = (card, player) => {
+  let thing = false
+  if (card.type === 'monster') {
+    thing = (player.MIP.length === 0 && card.tier === 1) ? true : false
+  } else if (card.type === 'spell') {
+    const spellDamage = calcSpellDamage(card, player)
+    thing = (spellDamage > 0) ? true : false
   }
+  return thing
+}
 
-  switch (card.type) {
-    case 'monster':
-      return (
-        <div className='monsterCard'>
-          <div className='top-row-monster'>
-            <h3 className='monsterName'>{card.name}</h3>
-            <h3 className='monsterHealth'>{card.HP}</h3>
-          </div>
-          <button style={buttonProps}>PLAY</button>
-          <p className='monsterMaster'>Master: {card.master.join(' ')}</p>
-          <p className='monsterApprentice'>Apprentice: {card.apprentice.join(' ')}</p>
-          <p className='monsterWeak'>Weak to: {card.weak.join(' ')}</p>
-        </div>
-      )
+// This function takes a card and returns that card's evolution tier
 
-    case 'spell':
-      return (
-        <div className='spellCard'>
-          <h3 className='spellName'>{card.name}</h3>
-          <p className='spellTier'>Tier: {card.tier}</p>
-          <p className='spellText'>{card.effectText}</p>
-          <p className='spellHealth'>Apprentice Health Cost: {card.healthCost}</p>
-        </div>
-      )
+const canEvolve = (card, player) => {
+  (player.MIP.length > 0 && player.MIP[player.MIP.length - 1].tier === (card.tier - 1)) ? true : false
+}
+
+// changed to returning false rather than 1
+const returnEvolveTier = function (card) {
+  if (card.tier) {
+    const evolveTier = card.tier + 1
+    return evolveTier
+  } else {
+    return false
   }
 }
 
@@ -231,30 +229,36 @@ const drawACard = (player, number) => {
   })
 }
 
-const shuffle = (myArray) => {
-  if (myArray.length === 0) {
+const Card = ({card, player, onPlay, myIndex}) => {
+  const buttonProps = {
+    display: canPlay(card, player) ? 'block' : 'none'
   }
-  const newArray = [...myArray]
-  let i = 0
-  let j = 0
-  let temp = null
 
-  for (i = newArray.length - 1; i > 0; i -= 1) {
-    j = Math.floor(Math.random() * (i + 1))
-    temp = newArray[i]
-    newArray[i] = newArray[j]
-    newArray[j] = temp
+  switch (card.type) {
+    case 'monster':
+      return (
+        <div className='monsterCard'>
+          <div className='top-row-monster'>
+            <h3 className='monsterName'>{card.name}</h3>
+            <h3 className='monsterHealth'>{card.HP}</h3>
+          </div>
+          <button style={buttonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
+          <p className='monsterMaster'>Master: {card.master.join(' ')}</p>
+          <p className='monsterApprentice'>Apprentice: {card.apprentice.join(' ')}</p>
+          <p className='monsterWeak'>Weak to: {card.weak.join(' ')}</p>
+        </div>
+      )
+
+    case 'spell':
+      return (
+        <div className='spellCard'>
+          <h3 className='spellName'>{card.name}</h3>
+          <p className='spellTier'>Tier: {card.tier}</p>
+          <p className='spellText'>{card.effectText}</p>
+          <p className='spellHealth'>Apprentice Health Cost: {card.healthCost}</p>
+        </div>
+      )
   }
-  return newArray
-}
-
-// takes a player as an input
-// creates a cloned object that takes the player's deck and trash, concats them, and calls shuffle()
-// Returns a new deck with all the cards from the trash properly shuffled in
-const shuffleTrashIntoDeck = (deck, trash) => {
-  let newDeck = [...deck].concat([...trash])
-  newDeck = shuffle(newDeck)
-  return newDeck
 }
 
 class Board extends React.Component {
@@ -262,7 +266,7 @@ class Board extends React.Component {
     super(props)
     this.state = {
       player: {
-        name: 'Player',
+        name: 'player',
         HP: 15,
         deck: [monsters[0], monsters[4], monsters[1], monsters[4]],
         trash: [],
@@ -271,7 +275,7 @@ class Board extends React.Component {
         tempInPlay: []
       },
       opponent: {
-        name: 'Opponent',
+        name: 'opponent',
         HP: 15,
         deck: [monsters[2], monsters[3], monsters[2], spells[0], monsters[1]],
         trash: [],
@@ -280,6 +284,8 @@ class Board extends React.Component {
         tempInPlay: []
       }
     }
+
+    this.playCard = this.playCard.bind(this)
   }
 
   componentDidMount () {
@@ -302,126 +308,57 @@ class Board extends React.Component {
     }))
   }
 
+  playCard (cardIndex, player) {
+    var newPlay = [...player.MIP]
+    var newHand = [...player.hand]
+    const myCard = newHand[cardIndex]
+    newPlay.push(myCard)
+    newHand.splice(cardIndex, 1)
+    if (player.name === 'player') {
+      this.setState((prevState) => ({
+        ...prevState,
+        player: {
+          ...prevState.player,
+          MIP: [...newPlay],
+          hand: [...newHand]
+        }
+      }))
+    } else if (player.name === 'opponent') {
+      this.setState((prevState) => ({
+        ...prevState,
+        opponent: {
+          ...prevState.opponent,
+          MIP: [...newPlay],
+          hand: [...newHand]
+        }
+      }))
+    } else {
+      console.log('passed the wrong card to playCard')
+    }
+  }
+
   render () {
+    console.log('rendering')
     return (
       <div className='Board'>
         <div className='opponent-row'>
           <BlindHand player={this.state.opponent} />
           <Health player={this.state.opponent} />
-
         </div>
-        <HostingComponent />
-        <Hand player={this.state.player} />
-        <Health player={this.state.player} />
+        <div className='MIP-row'>
+          <MIPArea player={this.state.opponent} />
+          <MIPArea player={this.state.player} />
+        </div>
+
+        <div className='player-row'>
+          <Hand player={this.state.player} onPlay={this.playCard} />
+          <Health player={this.state.player} />
+        </div>
 
       </div>
     )
   }
 
 }
-
-// P L A Y I N G
-// D R A W I N G
-//    A N D
-// S H U F F L I N G
-
-// http://stackoverflow.com/questions/6857468/converting-a-js-object-to-an-array
-
-// takes a card and executes that card's effect, then locates the card's index in the player's hand
-// and removes the card from the player's hand, then pushes it to the trash array.
-/*
-const playCard = function (myCardIndex) {
-  const discardedCard = playerHand.splice(myCardIndex, 1)[0]
-  discardedCard.cardEffect()
-  playerTrash.push(discardedCard)
-  renderPlayerHand()
-  renderEnemyHand()
-  renderHealth()
-}
-
-// R E N D E R I N G
-//   T H I N G S
-
-// takes an array of card elements and adds a play button to them if they can be played
-// FUTURE - HIGHLIGHT WITH RELEVANT BORDERS
-
-// This function expects to be applied to hovered cards. On hover, it determines if the card in question is
-// a monster. If yes, it checks if it's a tier 1 monster AND the monster zone if empty. If yes, it turns
-// the card opaque and adds a "Play" button to the card
-
-// Takes a monster and a player. The card is removed from the hand array and entered into the inPlay array
-const putIntoPlay = function (monster, player) {
-  var inPlayNow = player.MIP
-
-  if (inPlayNow.tier > 0) {
-    player.tempInPlay.push(inPlayNow)
-  }
-
-  player[MIP] = null
-  player[MIP] = monster
-
-  // Finds the monster in the player's hand and removes it from the hand array
-  var handIndex = player.hand.indexOf(monster)
-  player.hand.splice(handIndex, 1)
-
-  renderMonsters()
-  renderHands()
-}
-
-// Takes a player as input, returns true if their monsterZone is empty and false if it is full
-const isMonstersEmpty = ({player}) => {
-  if (player.MIP.name) {
-    return true
-  } else {
-    return false
-  }
-}
-
-// return true if the given tier matches the card
-
-const doesTierMatch = function (tier, card) {
-  if (card.tier === tier) {
-    return true
-  } else {
-    return false
-  }
-}
-
-// Takes a card and an array, then loops through the array to find if the card could evolve to any of the array cards
-// If yes, it returns that array; if not, it returns false
-
-const checkEvolveMatch = function (myCard, myArray) {
-  var evolveTo = returnEvolveTier(myCard)
-  var MatchingCards = myArray.filter(function (exampleCard) {
-    return doesTierMatch(evolveTo, exampleCard)
-  })
-  if (MatchingCards.length > 0) {
-    return MatchingCards
-  } else {
-    return false
-  }
-}
-
-// Takes a card and an array and returns true if the card COULD evolve into an array card, and false if not
-
-const canEvolve = function (myCard, myArray) {
-  const evolveYes = checkEvolveMatch(myCard, myArray)
-  if (evolveYes) {
-    return true
-  } else {
-    return false
-  }
-}
-
-// Takes a player as an input, then returns true if they have a monster in play, and false if not
-
-const hasMIP = function (player) {
-  if (player.MIP.tier) {
-    return true
-  } else {
-    return false
-  }
-}
-*/
 
 export default Board
