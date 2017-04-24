@@ -49,8 +49,8 @@ let monsters = [
     id: 5,
     tier: 2,
     HP: 600,
-    master: [1, 2],
-    apprentice: [3],
+    master: [2],
+    apprentice: [1, 3],
     weak: []
   }
 ]
@@ -97,10 +97,10 @@ const InPlayCard = ({card}) => (
 )
 
 // takes a player as an input and returns a div with all the cards in their hand displayed
-const Hand = ({player, onPlay}) => (
+const Hand = ({player, onPlay, spellPlay}) => (
   <div className='hand'>
     {player.hand.map((card, index) =>
-      <Card card={card} key={index} player={player} onPlay={onPlay} myIndex={index} />
+      <Card card={card} key={index} player={player} onPlay={onPlay} myIndex={index} spellPlay={spellPlay} />
     )}
   </div>
 )
@@ -162,6 +162,8 @@ const hasMIP = function (player) {
 // returns false if the player cannot cast the spell normally
 const calcSpellDamage = (spellCard, player) => {
   let damage = 0
+
+  // determines whether or not the player's monster can cast the card and for how much damage
   if (!hasMIP(player)) {
     console.log('player has no monster in play')
     return false
@@ -169,7 +171,7 @@ const calcSpellDamage = (spellCard, player) => {
     console.log('card is receiving normal damage')
     damage = spellCard.damage
     return damage
-  } else if (player.MIP.apprentice[player.MIP.length - 1].indexOf(spellCard.tier) !== -1) {
+  } else if (player.MIP[player.MIP.length - 1].apprentice.indexOf(spellCard.tier) !== -1) {
     console.log('card is receiving apprentice damage')
     damage = spellCard.damage - 200
     return damage
@@ -237,7 +239,7 @@ const drawACard = (player, number) => {
   })
 }
 
-const Card = ({card, player, onPlay, myIndex}) => {
+const Card = ({card, player, onPlay, myIndex, spellPlay}) => {
   const monsterButtonProps = {
     display: canPlay(card, player) ? 'block' : 'none'
   }
@@ -266,7 +268,7 @@ const Card = ({card, player, onPlay, myIndex}) => {
       return (
         <div className='spellCard'>
           <h3 className='spellName'>{card.name}</h3>
-          <button style={monsterButtonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
+          <button style={monsterButtonProps} onClick={e => spellPlay(myIndex, player)}>PLAY</button>
           <p className='spellTier'>Tier: {card.tier}</p>
           <p className='spellText'>{card.effectText}</p>
           <p className='spellHealth'>Apprentice Health Cost: {card.healthCost}</p>
@@ -300,6 +302,7 @@ class Board extends React.Component {
     }
 
     this.playCard = this.playCard.bind(this)
+    this.playSpell = this.playSpell.bind(this)
   }
 
   componentDidMount () {
@@ -322,6 +325,7 @@ class Board extends React.Component {
     }))
   }
 
+  // takes a cardIndex and a player, removes that card from the player's hand and adds it to play, then updates state
   playCard (cardIndex, player) {
     var newPlay = [...player.MIP]
     var newHand = [...player.hand]
@@ -351,6 +355,42 @@ class Board extends React.Component {
     }
   }
 
+  playSpell (cardIndex, player) {
+    let newHand = [...player.hand]
+    let opposingPlayer = (player.name === 'player') ? this.state.player : this.state.opponent
+    let opposingPlayerName = (player.name === 'player') ? 'player' : 'opponent'
+    let spellDamage = calcSpellDamage(newHand[cardIndex], player)
+    console.log('spell damage is ' + spellDamage)
+    let opponentMIP = [...opposingPlayer.MIP]
+
+    // If opponent has no MIP, then do damage directly to opposing player health
+    if (player.name === 'player' && this.state.opponent.MIP.length === 0) {
+      console.log('damaging the opponent for ' + spellDamage)
+      this.setState((prevState) => ({
+        ...prevState,
+        opponent: {
+          ...prevState.opponent,
+          HP: prevState.opponent.HP - spellDamage
+        }
+      }))
+    } else if (opposingPlayer.MIP.length === 0 && player.name === 'opponent') {
+      console.log('damaging the player for ' + spellDamage)
+      this.setState((prevState) => ({
+        ...prevState,
+        player: {
+          ...prevState.player,
+          HP: prevState.player.HP - spellDamage
+        }
+      }))
+    }
+
+    // checks for weakness and adds 200 to spellDamage if so
+    if (opposingPlayer.MIP[opposingPlayer.MIP.length - 1].weak.indexOf(newHand[cardIndex].tier) !== -1) {
+      spellDamage += 200
+      console.log('add damage to a creature feature later')
+    }
+  }
+
   render () {
     console.log('rendering')
     return (
@@ -365,7 +405,7 @@ class Board extends React.Component {
         </div>
 
         <div className='player-row'>
-          <Hand player={this.state.player} onPlay={this.playCard} />
+          <Hand player={this.state.player} onPlay={this.playCard} spellPlay={this.playSpell} />
           <Health player={this.state.player} />
         </div>
 
