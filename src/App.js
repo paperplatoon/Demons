@@ -373,13 +373,23 @@ class Board extends React.Component {
           HP: prevState.opponent.HP - spellDamage
         }
       }))
-    } else if (opposingPlayer.MIP.length === 0 && player.name === 'opponent') {
+    } else if (player.name === 'opponent' && this.state.player.MIP.length === 0) {
       console.log('damaging the player for ' + spellDamage)
       this.setState((prevState) => ({
         ...prevState,
         player: {
           ...prevState.player,
           HP: prevState.player.HP - spellDamage
+        }
+      }))
+    } else if (player.name === 'player' && this.state.opponent.MIP[this.state.opponent.MIP.length - 1].weak.indexOf(newHand[cardIndex].tier !== -1)) {
+      spellDamage += 200
+      console.log('damaging the opponent monster for ' + spellDamage)
+      this.setState((prevState) => ({
+        ...prevState,
+        opponent: {
+          ...prevState.opponent,
+          MIP: [...prevState.opponent.MIP]
         }
       }))
     }
