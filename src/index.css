@@ -79,7 +79,7 @@ h3.monsterHealth {
 
 div.middle-row {
 	display: flex;
-	justify-content: space-between;
+	justify-content: space-around;
 	margin: 2%;
 }
 

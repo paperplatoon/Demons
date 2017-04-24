@@ -17,7 +17,7 @@ let monsters = [
     type: 'monster',
     name: 'Iggsy',
     id: 2,
-    tier: 1,
+    tier: 3,
     HP: 300,
     master: [1, 3],
     apprentice: [2],
@@ -151,7 +151,7 @@ const shuffleTrashIntoDeck = (deck, trash) => {
 
 // Takes a player as an input, then returns true if they have a monster in play, and false if not
 const hasMIP = function (player) {
-  if (player.MIP.tier) {
+  if (player.MIP.length > 0) {
     return true
   } else {
     return false
@@ -163,14 +163,18 @@ const hasMIP = function (player) {
 const calcSpellDamage = (spellCard, player) => {
   let damage = 0
   if (!hasMIP(player)) {
+    console.log('player has no monster in play')
     return false
-  } else if (player.MIP.master.indexOf(spellCard.tier) !== -1) {
+  } else if (player.MIP[player.MIP.length - 1].master.indexOf(spellCard.tier) !== -1) {
+    console.log('card is receiving normal damage')
     damage = spellCard.damage
     return damage
-  } else if (player.MIP.apprentice.indexOf(spellCard.tier) !== -1) {
+  } else if (player.MIP.apprentice[player.MIP.length - 1].indexOf(spellCard.tier) !== -1) {
+    console.log('card is receiving apprentice damage')
     damage = spellCard.damage - 200
     return damage
   } else {
+    console.log("card tier isn't in apprentice or master arrays ")
     return false
   }
 }
@@ -189,7 +193,11 @@ const canPlay = (card, player) => {
 // This function takes a card and returns that card's evolution tier
 
 const canEvolve = (card, player) => {
-  (player.MIP.length > 0 && player.MIP[player.MIP.length - 1].tier === (card.tier - 1)) ? true : false
+  let thing = false
+  if (card.type === 'monster') {
+    thing = (player.MIP.length > 0 && player.MIP[player.MIP.length - 1].tier === (card.tier - 1)) ? true : false
+  }
+  return thing
 }
 
 // changed to returning false rather than 1
@@ -230,8 +238,12 @@ const drawACard = (player, number) => {
 }
 
 const Card = ({card, player, onPlay, myIndex}) => {
-  const buttonProps = {
+  const monsterButtonProps = {
     display: canPlay(card, player) ? 'block' : 'none'
+  }
+
+  const monsterEvolveProps = {
+    display: canEvolve(card, player) ? 'block' : 'none'
   }
 
   switch (card.type) {
@@ -242,7 +254,8 @@ const Card = ({card, player, onPlay, myIndex}) => {
             <h3 className='monsterName'>{card.name}</h3>
             <h3 className='monsterHealth'>{card.HP}</h3>
           </div>
-          <button style={buttonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
+          <button style={monsterButtonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
+          <button style={monsterEvolveProps} onClick={e => onPlay(myIndex, player)}>EVOLVE</button>
           <p className='monsterMaster'>Master: {card.master.join(' ')}</p>
           <p className='monsterApprentice'>Apprentice: {card.apprentice.join(' ')}</p>
           <p className='monsterWeak'>Weak to: {card.weak.join(' ')}</p>
@@ -253,6 +266,7 @@ const Card = ({card, player, onPlay, myIndex}) => {
       return (
         <div className='spellCard'>
           <h3 className='spellName'>{card.name}</h3>
+          <button style={monsterButtonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
           <p className='spellTier'>Tier: {card.tier}</p>
           <p className='spellText'>{card.effectText}</p>
           <p className='spellHealth'>Apprentice Health Cost: {card.healthCost}</p>
@@ -268,7 +282,7 @@ class Board extends React.Component {
       player: {
         name: 'player',
         HP: 15,
-        deck: [monsters[0], monsters[4], monsters[1], monsters[4]],
+        deck: [monsters[0], monsters[4], spells[0], monsters[1]],
         trash: [],
         hand: [],
         MIP: [],
@@ -345,7 +359,7 @@ class Board extends React.Component {
           <BlindHand player={this.state.opponent} />
           <Health player={this.state.opponent} />
         </div>
-        <div className='MIP-row'>
+        <div className='middle-row'>
           <MIPArea player={this.state.opponent} />
           <MIPArea player={this.state.player} />
         </div>
