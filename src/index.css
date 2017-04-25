@@ -32,6 +32,14 @@ div.hand {
 	margin: 0.5%;
 }
 
+.spellCard {
+	padding: 1%;
+	width: 150px;
+	height: 200px;
+	background-color: #efefef;
+	margin: 0.5%;
+}
+
 /* Hides all the play buttons on all visible mosnters */
 div.playerHand button.play, div.middle-row button.play {
 	position: absolute;

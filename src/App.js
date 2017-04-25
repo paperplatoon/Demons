@@ -9,8 +9,8 @@ let monsters = [
     id: 1,
     tier: 1,
     HP: 400,
-    master: [1, 2],
-    apprentice: [3],
+    master: [2],
+    apprentice: [1, 3],
     weak: []
   },
   {
@@ -18,7 +18,7 @@ let monsters = [
     name: 'Iggsy',
     id: 2,
     tier: 3,
-    HP: 300,
+    HP: 800,
     master: [1, 3],
     apprentice: [2],
     weak: []
@@ -62,7 +62,7 @@ let spells = [
     tier: 1,
     effectText: 'deal 200 damage',
     healthCost: 100,
-    damage: 200
+    damage: 300
   }
 ]
 
@@ -240,7 +240,7 @@ const drawACard = (player, number) => {
 }
 
 const Card = ({card, player, onPlay, myIndex, spellPlay}) => {
-  const monsterButtonProps = {
+  const buttonProps = {
     display: canPlay(card, player) ? 'block' : 'none'
   }
 
@@ -256,11 +256,11 @@ const Card = ({card, player, onPlay, myIndex, spellPlay}) => {
             <h3 className='monsterName'>{card.name}</h3>
             <h3 className='monsterHealth'>{card.HP}</h3>
           </div>
-          <button style={monsterButtonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
+          <button style={buttonProps} onClick={e => onPlay(myIndex, player)}>PLAY</button>
           <button style={monsterEvolveProps} onClick={e => onPlay(myIndex, player)}>EVOLVE</button>
-          <p className='monsterMaster'>Master: {card.master.join(' ')}</p>
-          <p className='monsterApprentice'>Apprentice: {card.apprentice.join(' ')}</p>
-          <p className='monsterWeak'>Weak to: {card.weak.join(' ')}</p>
+          <p className='monsterMaster'>Master Tiers: {card.master.join(' ')}</p>
+          <p className='monsterApprentice'>Apprentice Tiers: {card.apprentice.join(' ')}</p>
+          <p className='monsterWeak'>Weak to Tiers: {card.weak.join(' ')}</p>
         </div>
       )
 
@@ -268,7 +268,7 @@ const Card = ({card, player, onPlay, myIndex, spellPlay}) => {
       return (
         <div className='spellCard'>
           <h3 className='spellName'>{card.name}</h3>
-          <button style={monsterButtonProps} onClick={e => spellPlay(myIndex, player)}>PLAY</button>
+          <button style={buttonProps} onClick={e => spellPlay(myIndex, player)}>PLAY</button>
           <p className='spellTier'>Tier: {card.tier}</p>
           <p className='spellText'>{card.effectText}</p>
           <p className='spellHealth'>Apprentice Health Cost: {card.healthCost}</p>
@@ -296,7 +296,7 @@ class Board extends React.Component {
         deck: [monsters[2], monsters[3], monsters[2], spells[0], monsters[1]],
         trash: [],
         hand: [],
-        MIP: [],
+        MIP: [monsters[1]],
         tempInPlay: []
       }
     }
@@ -332,73 +332,71 @@ class Board extends React.Component {
     const myCard = newHand[cardIndex]
     newPlay.push(myCard)
     newHand.splice(cardIndex, 1)
-    if (player.name === 'player') {
-      this.setState((prevState) => ({
-        ...prevState,
-        player: {
-          ...prevState.player,
-          MIP: [...newPlay],
-          hand: [...newHand]
-        }
-      }))
-    } else if (player.name === 'opponent') {
-      this.setState((prevState) => ({
-        ...prevState,
-        opponent: {
-          ...prevState.opponent,
-          MIP: [...newPlay],
-          hand: [...newHand]
-        }
-      }))
-    } else {
-      console.log('passed the wrong card to playCard')
-    }
+    var playerName = (player.name === 'player') ? 'player' : 'opponent'
+    this.setState((prevState) => ({
+      ...prevState,
+      [playerName]: {
+        ...prevState[playerName],
+        MIP: [...newPlay],
+        hand: [...newHand]
+      }
+    }))
   }
 
   playSpell (cardIndex, player) {
     let newHand = [...player.hand]
-    let opposingPlayer = (player.name === 'player') ? this.state.player : this.state.opponent
-    let opposingPlayerName = (player.name === 'player') ? 'player' : 'opponent'
+    let opposingPlayer = (player.name === 'player') ? this.state.opponent : this.state.player
+    let playerName = (player.name === 'player') ? 'player' : 'opponent'
+    let opposingPlayerName = (player.name === 'player') ? 'opponent' : 'player'
     let spellDamage = calcSpellDamage(newHand[cardIndex], player)
     console.log('spell damage is ' + spellDamage)
     let opponentMIP = [...opposingPlayer.MIP]
+    let opponentCard = opponentMIP[opponentMIP.length - 1]
 
     // If opponent has no MIP, then do damage directly to opposing player health
-    if (player.name === 'player' && this.state.opponent.MIP.length === 0) {
+    if (opponentMIP.length === 0) {
       console.log('damaging the opponent for ' + spellDamage)
       this.setState((prevState) => ({
         ...prevState,
-        opponent: {
-          ...prevState.opponent,
-          HP: prevState.opponent.HP - spellDamage
+        [opposingPlayerName]: {
+          ...prevState[opposingPlayerName],
+          HP: prevState[opposingPlayerName].HP - spellDamage
         }
       }))
-    } else if (player.name === 'opponent' && this.state.player.MIP.length === 0) {
-      console.log('damaging the player for ' + spellDamage)
-      this.setState((prevState) => ({
-        ...prevState,
-        player: {
-          ...prevState.player,
-          HP: prevState.player.HP - spellDamage
-        }
-      }))
-    } else if (player.name === 'player' && this.state.opponent.MIP[this.state.opponent.MIP.length - 1].weak.indexOf(newHand[cardIndex].tier !== -1)) {
+    // else if opponent Monster is weak to the spell, add 200 damage, then do the damage to the opponentCard HP
+    } else if (opponentMIP[opponentMIP.length - 1].weak.indexOf(newHand[cardIndex].tier) !== -1) {
       spellDamage += 200
-      console.log('damaging the opponent monster for ' + spellDamage)
+      console.log('super damaging the opponent monster for ' + spellDamage)
+      opponentCard.HP -= spellDamage
       this.setState((prevState) => ({
         ...prevState,
-        opponent: {
-          ...prevState.opponent,
-          MIP: [...prevState.opponent.MIP]
+        [opposingPlayerName]: {
+          ...prevState[opposingPlayerName],
+          MIP: [opponentMIP.slice(0, opponentMIP.length - 1), opponentCard]
+        }
+      }))
+    // else subtract the spell damage from the opponentCard HP total
+    } else {
+      console.log('damaging the opponent monster for ' + spellDamage)
+      opponentCard.HP -= spellDamage
+      this.setState((prevState) => ({
+        ...prevState,
+        [opposingPlayerName]: {
+          ...prevState[opposingPlayerName],
+          MIP: [opponentMIP.slice(0, opponentMIP.length - 1), opponentCard]
         }
       }))
     }
 
-    // checks for weakness and adds 200 to spellDamage if so
-    if (opposingPlayer.MIP[opposingPlayer.MIP.length - 1].weak.indexOf(newHand[cardIndex].tier) !== -1) {
-      spellDamage += 200
-      console.log('add damage to a creature feature later')
-    }
+    // remove the card from your hand and discard it
+    newHand.splice(cardIndex, 1)
+    this.setState((prevState) => ({
+      ...prevState,
+      [playerName]: {
+        ...prevState[playerName],
+        hand: newHand
+      }
+    }))
   }
 
   render () {
