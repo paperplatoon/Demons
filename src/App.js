@@ -352,49 +352,42 @@ class Board extends React.Component {
     console.log('spell damage is ' + spellDamage)
     let opponentMIP = [...opposingPlayer.MIP]
     let opponentCard = opponentMIP[opponentMIP.length - 1]
+    let newOpponentHP = [opposingPlayer.HP]
+    let newOpponentMIP = [ ...opposingPlayer.MIP]
 
     // If opponent has no MIP, then do damage directly to opposing player health
     if (opponentMIP.length === 0) {
       console.log('damaging the opponent for ' + spellDamage)
-      this.setState((prevState) => ({
-        ...prevState,
-        [opposingPlayerName]: {
-          ...prevState[opposingPlayerName],
-          HP: prevState[opposingPlayerName].HP - spellDamage
-        }
-      }))
+      newOpponentHP -= spellDamage
+
     // else if opponent Monster is weak to the spell, add 200 damage, then do the damage to the opponentCard HP
     } else if (opponentMIP[opponentMIP.length - 1].weak.indexOf(newHand[cardIndex].tier) !== -1) {
       spellDamage += 200
       console.log('super damaging the opponent monster for ' + spellDamage)
       opponentCard.HP -= spellDamage
-      this.setState((prevState) => ({
-        ...prevState,
-        [opposingPlayerName]: {
-          ...prevState[opposingPlayerName],
-          MIP: [opponentMIP.slice(0, opponentMIP.length - 1), opponentCard]
-        }
-      }))
+      newOpponentMIP = [opponentMIP.slice(0, opponentMIP.length - 1), opponentCard]
+
     // else subtract the spell damage from the opponentCard HP total
     } else {
       console.log('damaging the opponent monster for ' + spellDamage)
       opponentCard.HP -= spellDamage
-      this.setState((prevState) => ({
-        ...prevState,
-        [opposingPlayerName]: {
-          ...prevState[opposingPlayerName],
-          MIP: [opponentMIP.slice(0, opponentMIP.length - 1), opponentCard]
-        }
-      }))
+      newOpponentMIP = [opponentMIP.slice(0, opponentMIP.length - 1), opponentCard]
     }
 
     // remove the card from your hand and discard it
     newHand.splice(cardIndex, 1)
+
+    // set the state now
     this.setState((prevState) => ({
       ...prevState,
       [playerName]: {
         ...prevState[playerName],
         hand: newHand
+      },
+      [opposingPlayerName]: {
+        ...prevState[opposingPlayerName],
+        HP: newOpponentHP,
+        MIP: newOpponentMIP
       }
     }))
   }
